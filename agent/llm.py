@@ -1,6 +1,11 @@
 from dataclasses import dataclass
+import os
 
 import requests
+import torch
+
+
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 
 @dataclass
@@ -16,6 +21,13 @@ class LLM:
         self.config = config
         self._pipeline = None
 
+    def _infer_device(self):
+        if torch.cuda.is_available():
+            return 0
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return torch.device("mps")
+        return -1
+
     def _ensure_pipeline(self) -> None:
         if self.config.provider != "transformers" or self._pipeline:
             return
@@ -24,6 +36,7 @@ class LLM:
         self._pipeline = pipeline(
             "text2text-generation",
             model=self.config.model,
+            device=self._infer_device(),
         )
 
     def generate(self, prompt: str) -> str:
@@ -44,10 +57,11 @@ class LLM:
         self._ensure_pipeline()
         if not self._pipeline:
             raise RuntimeError("Transformers pipeline not initialized")
-        outputs = self._pipeline(
-            prompt,
-            max_new_tokens=self.config.max_new_tokens,
-            do_sample=self.config.temperature > 0,
-            temperature=self.config.temperature,
-        )
+        gen_kwargs = {
+            "max_new_tokens": self.config.max_new_tokens,
+            "do_sample": self.config.temperature > 0,
+        }
+        if self.config.temperature > 0:
+            gen_kwargs["temperature"] = self.config.temperature
+        outputs = self._pipeline(prompt, **gen_kwargs)
         return outputs[0]["generated_text"]
