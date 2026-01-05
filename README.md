@@ -1,6 +1,6 @@
 # Doc2GUI Operator (Document -> Form-Filling UI Agent)
 
-Local, free, end-to-end demo that ingests PDF instructions, builds a RAG index, uses a PyTorch CNN for layout tagging, and drives a browser with Playwright to complete local web forms. No paid APIs.
+Ingests PDF instructions, builds a RAG index, uses a PyTorch CNN for layout tagging, and drives a browser with Playwright to complete local web forms.
 
 ## Quick Start
 
@@ -43,6 +43,12 @@ Run evaluation suite (3 cases):
 
 ```bash
 python eval/run_eval.py
+```
+
+## One-Shot Run
+
+```bash
+./scripts/run_all.sh
 ```
 
 ## LLM/VLM Choices
