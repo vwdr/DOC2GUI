@@ -5,6 +5,12 @@ from typing import Any, Dict, List, Optional
 from agent.llm import LLM
 
 
+MAX_PROMPT_CHARS = 1800
+MAX_CHUNK_CHARS = 240
+MAX_EVIDENCE_CHUNKS = 4
+MAX_USERDATA_CHARS = 400
+
+
 @dataclass
 class FieldInfo:
     field_id: str
@@ -22,6 +28,13 @@ class ActionStep:
     evidence: List[str]
 
 
+def _truncate_text(text: str, max_chars: int) -> str:
+    cleaned = " ".join(text.split())
+    if len(cleaned) <= max_chars:
+        return cleaned
+    return cleaned[: max_chars - 3] + "..."
+
+
 def _build_prompt(fields: List[FieldInfo], user_data: Dict[str, Any], retrieved_chunks: List[Dict[str, str]]) -> str:
     field_lines = []
     for field in fields:
@@ -30,8 +43,10 @@ def _build_prompt(fields: List[FieldInfo], user_data: Dict[str, Any], retrieved_
 
     chunk_lines = []
     for chunk in retrieved_chunks:
-        chunk_lines.append(f"[{chunk['chunk_id']}] {chunk['text']}")
+        chunk_text = _truncate_text(chunk["text"], MAX_CHUNK_CHARS)
+        chunk_lines.append(f"[{chunk['chunk_id']}] {chunk_text}")
 
+    user_data_str = json.dumps(user_data, indent=2)
     prompt = (
         "You are a form-filling planner. Output ONLY valid JSON.\n"
         "Use the retrieved evidence chunks to justify each action.\n"
@@ -40,11 +55,43 @@ def _build_prompt(fields: List[FieldInfo], user_data: Dict[str, Any], retrieved_
         "Available fields:\n"
         + "\n".join(field_lines)
         + "\n\nUser data JSON:\n"
-        + json.dumps(user_data, indent=2)
+        + user_data_str
         + "\n\nRetrieved evidence:\n"
         + "\n".join(chunk_lines)
         + "\n\nPlan the minimal steps to fill the form and submit."
     )
+    while len(prompt) > MAX_PROMPT_CHARS and chunk_lines:
+        chunk_lines.pop()
+        prompt = (
+            "You are a form-filling planner. Output ONLY valid JSON.\n"
+            "Use the retrieved evidence chunks to justify each action.\n"
+            "JSON schema: {\"actions\": [{\"action_type\": \"fill|select|check|upload|submit\","
+            " \"selector\": string, \"value\": string|null, \"evidence\": [chunk_id]}]}\n\n"
+            "Available fields:\n"
+            + "\n".join(field_lines)
+            + "\n\nUser data JSON:\n"
+            + user_data_str
+            + "\n\nRetrieved evidence:\n"
+            + "\n".join(chunk_lines)
+            + "\n\nPlan the minimal steps to fill the form and submit."
+        )
+    if len(prompt) > MAX_PROMPT_CHARS and len(user_data_str) > MAX_USERDATA_CHARS:
+        user_data_str = _truncate_text(user_data_str, MAX_USERDATA_CHARS)
+        prompt = (
+            "You are a form-filling planner. Output ONLY valid JSON.\n"
+            "Use the retrieved evidence chunks to justify each action.\n"
+            "JSON schema: {\"actions\": [{\"action_type\": \"fill|select|check|upload|submit\","
+            " \"selector\": string, \"value\": string|null, \"evidence\": [chunk_id]}]}\n\n"
+            "Available fields:\n"
+            + "\n".join(field_lines)
+            + "\n\nUser data JSON:\n"
+            + user_data_str
+            + "\n\nRetrieved evidence:\n"
+            + "\n".join(chunk_lines)
+            + "\n\nPlan the minimal steps to fill the form and submit."
+        )
+    if len(prompt) > MAX_PROMPT_CHARS:
+        prompt = _truncate_text(prompt, MAX_PROMPT_CHARS)
     return prompt
 
 
@@ -57,12 +104,13 @@ def _safe_json(text: str) -> Dict[str, Any]:
 
 
 def plan_actions(llm: LLM, fields: List[FieldInfo], user_data: Dict[str, Any], retrieved_chunks: List[Dict[str, str]]) -> List[ActionStep]:
-    prompt = _build_prompt(fields, user_data, retrieved_chunks)
+    trimmed_chunks = retrieved_chunks[:MAX_EVIDENCE_CHUNKS]
+    prompt = _build_prompt(fields, user_data, trimmed_chunks)
     raw = llm.generate(prompt)
     try:
         payload = _safe_json(raw)
         actions = []
-        default_evidence = [chunk["chunk_id"] for chunk in retrieved_chunks[:2]]
+        default_evidence = [chunk["chunk_id"] for chunk in trimmed_chunks[:2]]
         for action in payload.get("actions", []):
             evidence = action.get("evidence", []) or default_evidence
             actions.append(
@@ -100,7 +148,7 @@ def plan_actions(llm: LLM, fields: List[FieldInfo], user_data: Dict[str, Any], r
                 action_type=action_type,
                 selector=field.selector,
                 value=value_str,
-                evidence=[chunk["chunk_id"] for chunk in retrieved_chunks[:2]],
+                evidence=[chunk["chunk_id"] for chunk in trimmed_chunks[:2]],
             )
         )
     fallback_actions.append(
@@ -108,7 +156,7 @@ def plan_actions(llm: LLM, fields: List[FieldInfo], user_data: Dict[str, Any], r
             action_type="submit",
             selector="[data-field='submit']",
             value=None,
-            evidence=[chunk["chunk_id"] for chunk in retrieved_chunks[:1]],
+            evidence=[chunk["chunk_id"] for chunk in trimmed_chunks[:1]],
         )
     )
     return fallback_actions
