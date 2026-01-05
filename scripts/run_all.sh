@@ -109,7 +109,13 @@ Path("/tmp/doc2gui_result.html").write_text(html, encoding="utf-8")
 PY
 
   echo "Result page saved to $RESULT_HTML"
-  echo "Open it with: open $RESULT_HTML (macOS) or xdg-open $RESULT_HTML (Linux)"
+  if command -v open >/dev/null 2>&1; then
+    open "$RESULT_HTML" >/dev/null 2>&1 || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$RESULT_HTML" >/dev/null 2>&1 || true
+  else
+    echo "Open it with: open $RESULT_HTML (macOS) or xdg-open $RESULT_HTML (Linux)"
+  fi
 else
   echo "Missing $REPORT_PATH"
 fi
