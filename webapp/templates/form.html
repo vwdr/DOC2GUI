@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ form.title }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>{{ form.title }}</h1>
+      <p>{{ form.description }}</p>
+      <div class="meta">Form ID: <strong>{{ form.form_id }}</strong></div>
+    </header>
+    <form class="form" method="post" action="/submit/{{ form.form_id }}" enctype="multipart/form-data">
+      {% for field in form.fields %}
+      <div class="field">
+        <label for="{{ field.field_id }}">{{ field.label }}{% if field.required %} *{% endif %}</label>
+        {% if field.field_type == "text" or field.field_type == "number" or field.field_type == "date" %}
+          <input
+            id="{{ field.field_id }}"
+            name="{{ field.field_id }}"
+            type="{{ field.field_type }}"
+            data-field="{{ field.field_id }}"
+            {% if field.required %}required{% endif %}
+          />
+        {% elif field.field_type == "select" %}
+          <select id="{{ field.field_id }}" name="{{ field.field_id }}" data-field="{{ field.field_id }}" {% if field.required %}required{% endif %}>
+            <option value="">Select...</option>
+            {% for option in field.options %}
+            <option value="{{ option.value }}">{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        {% elif field.field_type == "checkbox" %}
+          <div class="checkbox-row">
+            <input id="{{ field.field_id }}" name="{{ field.field_id }}" type="checkbox" data-field="{{ field.field_id }}" />
+            <span class="checkbox-label">{{ field.label }}</span>
+          </div>
+        {% elif field.field_type == "textarea" %}
+          <textarea id="{{ field.field_id }}" name="{{ field.field_id }}" data-field="{{ field.field_id }}" rows="4"></textarea>
+        {% elif field.field_type == "file" %}
+          <input id="{{ field.field_id }}" name="{{ field.field_id }}" type="file" data-field="{{ field.field_id }}" />
+        {% endif %}
+      </div>
+      {% endfor %}
+      <button class="button" type="submit" data-field="submit">Submit form</button>
+    </form>
+  </main>
+</body>
+</html>

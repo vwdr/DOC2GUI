@@ -1,0 +1,6 @@
+Doc2GUI Operator Policy Notes
+
+- All amounts must be numeric and use USD for the demo forms.
+- Dates must use the form's date picker format (YYYY-MM-DD).
+- If a checkbox is required, set it to true when the policy says "agree" or "eligible".
+- Incident notes should be brief (1-2 sentences) for faster submission.

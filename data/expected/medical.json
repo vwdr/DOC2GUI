@@ -1,0 +1,9 @@
+{
+  "patient_name": "Riley Chen",
+  "dob": "1991-02-12",
+  "insurance_provider": "Local Health",
+  "symptoms": "Headache and fatigue for two days.",
+  "visit_type": "checkup",
+  "fasting": "false",
+  "emergency_contact": "Morgan Chen, 555-0199"
+}

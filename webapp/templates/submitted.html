@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ form.title }} - Submitted</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Submission received</h1>
+      <p>{{ form.title }}</p>
+    </header>
+    <section class="card">
+      <h2>Payload</h2>
+      <pre class="payload">{{ payload | tojson(indent=2) }}</pre>
+      <a class="button" href="/">Back to forms</a>
+    </section>
+  </main>
+</body>
+</html>

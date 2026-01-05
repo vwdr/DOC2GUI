@@ -1,0 +1,11 @@
+.venv/
+.venv*/
+__pycache__/
+*.pyc
+.DS_Store
+runs/
+webapp/submissions/
+data/index/
+models/
+data/pdfs/
+data/docs/resume.pdf

@@ -1,0 +1,10 @@
+{
+  "full_name": "Sam Lee",
+  "email": "sam.lee@example.com",
+  "phone": "555-0109",
+  "position": "support_engineer",
+  "start_date": "2024-09-15",
+  "eligible_work": true,
+  "resume": "data/docs/resume.pdf",
+  "cover_letter": "Interested in the local support role."
+}
